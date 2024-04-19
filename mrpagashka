@@ -1,4 +1,7 @@
 local RS = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local manager = require(ServerScriptService.PlayerData.Manager)
 local Players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
 local rev_BlockPlacement = RS.Events.BlockPlacementEvent
@@ -9,10 +12,9 @@ local rev_BlockPlacementVFX2 = RS.Events.BlockPlacementVFX2Event
 local rev_Text = RS.Events.TextEvent
 local rev_BlockGui = RS.Events.BlockGuiEvent
 local rev_ChangeSave = RS.Events.ChangeSaveEvent
-local ServerScriptService = game:GetService("ServerScriptService")
-local manager = require(ServerScriptService.PlayerData.Manager)
 
 local Assets = RS.Assets
+local BlockPlaceSound = ServerStorage.Sounds.BlockPlaceSound
 local placedBlocks = workspace:WaitForChild("PlacedBlocks")
 local Plots = workspace:WaitForChild("Plots")
 local assignedPlots = {} -- Table to list players and plot that is assigned to them
@@ -22,19 +24,19 @@ local assignedSaves = {} -- Table to list players and Save that is assigned to t
 
 local Blocks = {
 	Block = {
-		Cost = 50,
+		Cost = 15,
 		MaxNumber = 5,
 		Points = 0.5,
 		Place = "Center"
 	},
 	Sideway = {
-		Cost = 15,
+		Cost = 5,
 		MaxNumber = 5,
 		Points = 0.5,
 		Place = "Sideways"
 	},
 	Transparent = {
-		Cost = 15,
+		Cost = 5,
 		MaxNumber = 5,
 		Points = nil,
 		Place = "Center"
@@ -160,7 +162,7 @@ rev_BlockPlacement.OnServerEvent:Connect(function(plr, Block, placementPos, bloc
 		rev_Text:FireClient(plr, "Need More Points")
 		return
 	end
-
+	
 	-- Block is placed sideways or in center according to Blocks table
 
 	local sideway = 2
@@ -195,6 +197,11 @@ rev_BlockPlacement.OnServerEvent:Connect(function(plr, Block, placementPos, bloc
 
 
 	placeBlock(plr, Block, blockPos, blockPosToObjectSpace, blockRotation)
+	
+	-- Sound
+	
+	local BlockPlaceSound = plr.Character.HumanoidRootPart.BlockPlaceSound
+	BlockPlaceSound:Play()
 end)
 
 -- Put ClickDetector in every plot so they are clickable and plot is assigned to player when clicked
@@ -265,9 +272,22 @@ rev_ChangeSave.OnServerEvent:Connect(function(plr, save)
 end)
 
 Players.PlayerAdded:Connect(function(plr)
-	local profile = manager.Profiles[plr]
-	if not profile then return end
+	
+	-- Sound which is parented to HumanoidRootPart when player spawns will be used when he places block and every player will be able to hear it if they are near
 
+	plr.CharacterAdded:Connect(function(character)
+		local BlockPlaceSound = BlockPlaceSound:Clone()
+		BlockPlaceSound.Parent = character:WaitForChild("HumanoidRootPart")
+	end)
+	
+	local newProfile = tick()
+	local maxforProfile = 10
+	
+	repeat wait(0.1) until manager.Profiles[plr] ~= nil or tick() - newProfile > maxforProfile
+	local profile = manager.Profiles[plr]
+
+	if not profile then return end
+	
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	leaderstats.Parent = plr
@@ -279,6 +299,7 @@ Players.PlayerAdded:Connect(function(plr)
 	Plot.Name = "Plot"
 	Plot.Value = "no Plot"
 	Plot.Parent = leaderstats
+
 end)
 
 -- Players receive points if there are blocks palced on their plot which have points value assigned accoring to blocks table
