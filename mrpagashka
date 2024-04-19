@@ -1,3 +1,5 @@
+*.lua linguist-detectable=false
+
 local RS = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local tweenService = game:GetService("TweenService")
